@@ -75,7 +75,7 @@ spec:
 
     stage('Run Unit Tests and Generate Coverage') {
       steps {
-        sh 'chmod +x ./test/script/auto_script.sh && ./test/script/auto_script.sh'
+        sh 'chmod +x ./test/script/chen.sh && ./test/script/chen.sh'
       }
       post {
         always {
