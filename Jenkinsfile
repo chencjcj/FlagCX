@@ -19,7 +19,10 @@ spec:
     image: nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
     resources:
       limits:
-        nvidia.com/gpu: "8"
+        nvidia.com/gpu: "1"
+      requests:
+        cpu: "8"
+        memory: "10Gi"
     securityContext:
       capabilities:
         add:
