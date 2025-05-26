@@ -32,9 +32,9 @@ spec:
         - \$(JENKINS_NAME)
       env:
         - name: http_proxy
-          value: http://10.10.10.1:7890
+          value: http://10.1.2.1:7890
         - name: https_proxy
-          value: http://10.10.10.1:7890
+          value: http://10.1.2.1:7890
         - name: no_proxy
           value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
 
@@ -44,9 +44,9 @@ spec:
       command: ["sleep", "inf"]
       env:
         - name: http_proxy
-          value: http://10.10.10.1:7890
+          value: http://10.1.2.1:7890
         - name: https_proxy
-          value: http://10.10.10.1:7890
+          value: http://10.1.2.1:7890
         - name: no_proxy
           value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
       volumeMounts:
