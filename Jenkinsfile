@@ -75,7 +75,11 @@ spec:
 
     stage('Run Unit Tests and Generate Coverage') {
       steps {
-        sh 'chmod +x ./test/script/chen.sh && ./test/script/chen.sh'
+        sh '''
+            chmod +x ./test/script/chen.sh
+            ./test/script/chen.sh
+            ls -la coverage.xml || { echo "Error: coverage.xml not found"; exit 1; }
+        '''
       }
       post {
         always {
