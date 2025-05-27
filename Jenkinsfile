@@ -72,15 +72,25 @@ spec:
       }
     }
 
-    stage('Publish Coverage and Check') {
+    stage('Publish Coverage') {
+      steps {
+        recordCoverage tools: [cobertura(coberturaReportFile: 'coverage.xml')]
+      }
+    }
+
+    stage('Check Coverage Threshold') {
       steps {
         script {
-          catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-            recordCoverage(
-              tools: [cobertura(coberturaReportFile: 'coverage.xml')],
-              minimumCoverage: 'LINE:50',
-              failUnhealthy: true
-            )
+          def coverage = 0
+          try {
+            def action = currentBuild.rawBuild.getAction(hudson.plugins.cobertura.CoberturaBuildAction)
+            coverage = action?.getCoverage(hudson.plugins.cobertura.targets.CoverageMetric.LINE)?.getPercentage() ?: 0
+          } catch (e) {
+            echo "Failed to get coverage: ${e}"
+          }
+          echo "Code coverage: ${coverage}%"
+          if (coverage < 50) {
+            error "Code coverage below 50%, failing build."
           }
         }
       }
