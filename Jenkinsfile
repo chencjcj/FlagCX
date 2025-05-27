@@ -70,23 +70,23 @@ spec:
           ./test/script/chen.sh
         '''
       }
-      post {
-        always {
-          cobertura coberturaReportFile: 'coverage.xml'
-        }
-      }
     }
 
-    stage('Check Coverage Threshold') {
+    stage('Publish Coverage and Check') {
       steps {
         script {
-          def coverage = currentBuild.rawBuild.getAction(hudson.plugins.cobertura.CoberturaBuildAction)
-            ?.getCoverage(hudson.plugins.cobertura.targets.CoverageMetric.LINE)
-            ?.getPercentage() ?: 0
-          echo "Code coverage: ${coverage}%"
-          if (coverage < 50) {
-            error "Code coverage below 50%, failing build."
+          catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+            recordCoverage(
+              tools: [cobertura('coverage.xml')],
+              minimumCoverage: 'LINE:50',
+              failUnhealthy: true
+            )
           }
+        }
+      }
+      post {
+        failure {
+          echo '❌ Code coverage below 50%, failing build!'
         }
       }
     }
