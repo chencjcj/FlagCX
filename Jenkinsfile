@@ -66,8 +66,8 @@ spec:
     stage('Unit Tests') {
       steps {
         sh '''
-          pip install pytest pytest-cov
-          pytest --cov=your_package --cov-report=xml:coverage.xml tests/
+          chmod +x ./test/script/chen.sh
+          ./test/script/chen.sh
         '''
       }
     }
