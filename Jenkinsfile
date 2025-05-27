@@ -8,11 +8,9 @@ pipeline {
 apiVersion: v1
 kind: Pod
 metadata:
-  name: jenkins
   namespace: jenkins
 spec:
   hostNetwork: true
-  priorityClassName: higher-priority-job
   volumes:
     - name: dshm
       emptyDir:
@@ -33,7 +31,6 @@ spec:
           value: http://10.1.2.1:7890
         - name: no_proxy
           value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
-
     - name: main
       image: harbor.local.clusters/kubesphereio/infrawaves24.10@sha256:153c7ebd06473540fd6c740cb6b9acf1ec76d016904b8e66e09bee521609e923
       imagePullPolicy: IfNotPresent
@@ -50,7 +47,7 @@ spec:
           mountPath: /dev/shm
       resources:
         limits:
-          nvidia.com/gpu: '1'
+          nvidia.com/gpu: '8'
       securityContext:
         capabilities:
           add: [IPC_LOCK, SYS_RESOURCE]
@@ -69,30 +66,35 @@ spec:
     stage('Unit Tests') {
       steps {
         sh '''
-            chmod +x ./test/script/chen.sh
-            ./test/script/chen.sh
+          chmod +x ./test/script/chen.sh
+          ./test/script/chen.sh
         '''
       }
       post {
-     	always {
-          cobertura coberturaReportFile: 'coverage.xml',
-                 failUnhealthy: true,       
-                 failUnstable: true,
-                 lineCoverageTargets: '50'   
+        always {
+          cobertura coberturaReportFile: 'coverage.xml'
         }
       }
     }
 
     stage('Check Coverage Threshold') {
       steps {
-        echo "Coverage threshold check is done by cobertura plugin automatically."
+        script {
+          def coverage = currentBuild.rawBuild.getAction(hudson.plugins.cobertura.CoberturaBuildAction)
+            ?.getCoverage(hudson.plugins.cobertura.targets.CoverageMetric.LINE)
+            ?.getPercentage() ?: 0
+          echo "Code coverage: ${coverage}%"
+          if (coverage < 50) {
+            error "Code coverage below 50%, failing build."
+          }
+        }
       }
     }
 
     stage('E2E test') {
       steps {
         sh '''
-            echo skip
+          echo skip
         '''
       }
     }
