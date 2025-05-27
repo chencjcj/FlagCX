@@ -77,7 +77,7 @@ spec:
         script {
           catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
             recordCoverage(
-              tools: [cobertura('coverage.xml')],
+              tools: [cobertura(coberturaReportFile: 'coverage.xml')],
               minimumCoverage: 'LINE:50',
               failUnhealthy: true
             )
