@@ -74,23 +74,18 @@ spec:
         '''
       }
       post {
-        always {
-          cobertura coberturaReportFile: 'coverage.xml'
+     	always {
+          cobertura coberturaReportFile: 'coverage.xml',
+                 failUnhealthy: true,       
+                 failUnstable: true,
+                 lineCoverageTargets: '50'   
         }
       }
     }
 
     stage('Check Coverage Threshold') {
       steps {
-        script {
-          def coverage = currentBuild.rawBuild.getAction(hudson.plugins.cobertura.CoberturaBuildAction)
-            ?.getCoverage(hudson.plugins.cobertura.targets.CoverageMetric.LINE)
-            ?.getPercentage() ?: 0
-          echo "Code coverage: ${coverage}%"
-          if (coverage < 50) {
-            error "Code coverage below 50%, fail the build."
-          }
-        }
+        echo "Coverage threshold check is done by cobertura plugin automatically."
       }
     }
 
