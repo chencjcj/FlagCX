@@ -1,37 +1,16 @@
 #!/bin/bash
 BUILD_DIR="build"
-
 mkdir -p $BUILD_DIR
 
-MPI_HOME=/usr/local/mpi 
-make USE_NVIDIA=1
-
-if [ $? -ne 0 ]; then
-    echo "Compilation failed!"
-    exit 1
-fi
+MPI_HOME=/usr/local/mpi
+make USE_NVIDIA=1 CFLAGS="--coverage" LDFLAGS="--coverage"
 
 cd test/perf
-make USE_NVIDIA=1
+make USE_NVIDIA=1 
+mpirun --allow-run-as-root -np 8 ./test_alltoall -b 128M -e 1G -f 2 -p 1
+mpirun --allow-run-as-root -np 8 ./test_allreduce -b 128M -e 1G -f 2 -p 1
 
-if [ $? -ne 0 ]; then
-    echo "Test compilation failed!"
-    exit 1
-fi
+lcov --capture --directory . --output-file coverage.info
+genhtml coverage.info --output-directory coverage_html
 
-
-mpirun --allow-run-as-root  -np 8   ./test_alltoall -b 128M -e 1G -f 2 -p 1
-if [ $? -ne 0 ]; then
-    echo "test_alltoall execution failed!"
-    exit 1
-fi
-
-
-mpirun --allow-run-as-root  -np 8 ./test_allreduce -b 128M -e 1G -f 2 -p 1
-if [ $? -ne 0 ]; then
-    echo "test_allreduce execution failed!"
-    exit 1
-fi
-
-echo "All tests completed successfully!"
-
+gcovr --xml-pretty --root .. --output coverage.xml
