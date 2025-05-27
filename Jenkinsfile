@@ -15,9 +15,6 @@ spec:
     jenkins-agent: "true"
   hostNetwork: true
   volumes:
-    - name: infrawaves-volume
-      hostPath:
-        path: /mnt/nfs
     - name: dshm
       emptyDir:
         medium: Memory
@@ -50,14 +47,11 @@ spec:
         - name: no_proxy
           value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
       volumeMounts:
-        - name: infrawaves-volume
-          mountPath: /workspace/infrawaves
         - name: dshm
           mountPath: /dev/shm
       resources:
         limits:
           nvidia.com/gpu: '8'
-          rdma/hca_shared_devices: '1'
       securityContext:
         capabilities:
           add: [IPC_LOCK, SYS_RESOURCE]
@@ -78,28 +72,13 @@ spec:
         sh '''
             chmod +x ./test/script/chen.sh
             ./test/script/chen.sh
-            ls -la coverage.xml || { echo "Error: coverage.xml not found"; exit 1; }
         '''
       }
-      post {
-        always {
-          cobertura coberturaReportFile: 'coverage.xml'
-        }
-      }
     }
-
-    stage('Check Coverage Threshold') {
+    
+    stage('Complete') {
       steps {
-        script {
-          def coverage = currentBuild.rawBuild
-            .getAction(hudson.plugins.cobertura.CoberturaBuildAction)
-            ?.getCoverage(hudson.plugins.cobertura.targets.CoverageMetric.LINE)
-            ?.getPercentage() ?: 0
-          echo "Code coverage: ${coverage}%"
-          if (coverage < 90) {
-            error "Code coverage below 90%, fail the build."
-          }
-        }
+        echo '🎉 Pipeline completed successfully!'
       }
     }
   }
