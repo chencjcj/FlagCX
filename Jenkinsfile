@@ -74,7 +74,7 @@ spec:
 
     stage('Publish Coverage') {
       steps {
-        recordCoverage tools: [cobertura(coberturaReportFile: 'coverage.xml')]
+        recordCoverage tool: coberturaReportFile('coverage.xml')
       }
     }
 
