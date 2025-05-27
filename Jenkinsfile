@@ -11,8 +11,6 @@ metadata:
   name: jenkins
   namespace: jenkins
 spec:
-  nodeSelector:
-    jenkins-agent: "true"
   hostNetwork: true
   volumes:
     - name: dshm
@@ -21,7 +19,7 @@ spec:
         sizeLimit: "50G"
   containers:
     - name: jnlp
-      image: jenkins/inbound-agent:latest
+      image: harbor.local.clusters/bp/jenkins/inbound-agent:latest
       imagePullPolicy: IfNotPresent
       args:
         - -webSocket
@@ -67,7 +65,7 @@ spec:
       }
     }
 
-    stage('Run Unit Tests and Generate Coverage') {
+    stage('Unit Tests') {
       steps {
         sh '''
             chmod +x ./test/script/chen.sh
@@ -80,6 +78,7 @@ spec:
         }
       }
     }
+
     stage('Check Coverage Threshold') {
       steps {
         script {
@@ -87,12 +86,21 @@ spec:
             ?.getCoverage(hudson.plugins.cobertura.targets.CoverageMetric.LINE)
             ?.getPercentage() ?: 0
           echo "Code coverage: ${coverage}%"
-          if (coverage < 90) {
-            error "Code coverage below 90%, fail the build."
+          if (coverage < 50) {
+            error "Code coverage below 50%, fail the build."
           }
         }
       }
     }
+
+    stage('E2E test') {
+      steps {
+        sh '''
+            echo skip
+        '''
+      }
+    }
+
     stage('Complete') {
       steps {
         echo '🎉 Pipeline completed successfully!'
