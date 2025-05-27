@@ -12,6 +12,7 @@ metadata:
   namespace: jenkins
 spec:
   hostNetwork: true
+  priorityClassName: higher-priority-job
   volumes:
     - name: dshm
       emptyDir:
