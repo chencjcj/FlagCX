@@ -50,7 +50,7 @@ spec:
           mountPath: /dev/shm
       resources:
         limits:
-          nvidia.com/gpu: '8'
+          nvidia.com/gpu: '1'
       securityContext:
         capabilities:
           add: [IPC_LOCK, SYS_RESOURCE]
