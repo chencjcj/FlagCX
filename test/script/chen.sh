@@ -2,6 +2,9 @@
 BUILD_DIR="build"
 mkdir -p $BUILD_DIR
 
+apt-get update
+apt-get install -y lcov gcovr python3-pip
+
 MPI_HOME=/usr/local/mpi
 make USE_NVIDIA=1 CFLAGS="--coverage" LDFLAGS="--coverage"
 
