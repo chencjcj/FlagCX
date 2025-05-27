@@ -58,7 +58,7 @@ spec:
   stages {
     stage('Verify') {
       steps {
-        echo '✅ Running on jenkins pod'
+        echo '✅ Running on Jenkins pod'
         sh 'env | grep -i proxy'
       }
     }
@@ -66,15 +66,15 @@ spec:
     stage('Unit Tests') {
       steps {
         sh '''
-          chmod +x ./test/script/chen.sh
-          ./test/script/chen.sh
+          pip install pytest pytest-cov
+          pytest --cov=your_package --cov-report=xml:coverage.xml tests/
         '''
       }
     }
 
     stage('Publish Coverage') {
       steps {
-        recordCoverage tool: coberturaReportFile('coverage.xml')
+        recordCoverage tools: coberturaReportFile('coverage.xml')
       }
     }
 
@@ -83,29 +83,29 @@ spec:
         script {
           def coverage = 0
           try {
-            def action = currentBuild.rawBuild.getAction(hudson.plugins.cobertura.CoberturaBuildAction)
-            coverage = action?.getCoverage(hudson.plugins.cobertura.targets.CoverageMetric.LINE)?.getPercentage() ?: 0
+            def action = currentBuild.rawBuild.getAction(io.jenkins.plugins.coverage.metrics.CoverageBuildAction)
+            def report = action?.getReport()
+            def line = report?.getCoverage('LINE')
+            coverage = line?.toRatio()?.toDouble() * 100
           } catch (e) {
-            echo "Failed to get coverage: ${e}"
+            echo "⚠️ Failed to get coverage: ${e}"
           }
-          echo "Code coverage: ${coverage}%"
+          echo "🔍 Code coverage: ${String.format('%.2f', coverage)}%"
           if (coverage < 50) {
-            error "Code coverage below 50%, failing build."
+            error "❌ Code coverage below 50%, failing build."
           }
         }
       }
       post {
         failure {
-          echo '❌ Code coverage below 50%, failing build!'
+          echo '📉 阈值不达标：覆盖率未满 50%，已阻止后续阶段执行。'
         }
       }
     }
 
     stage('E2E test') {
       steps {
-        sh '''
-          echo skip
-        '''
+        sh 'echo skip'
       }
     }
 
