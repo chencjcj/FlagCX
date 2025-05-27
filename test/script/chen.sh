@@ -3,7 +3,9 @@ BUILD_DIR="build"
 mkdir -p $BUILD_DIR
 
 apt-get update -y
-apt-get install -y lcov gcovr python3-pip
+apt-get install -y lcov  python3-pip
+
+pip3 install gcovr -i   https://pypi.mirrors.ustc.edu.cn/simple/
 
 MPI_HOME=/usr/local/mpi
 make USE_NVIDIA=1 CFLAGS="--coverage" LDFLAGS="--coverage"
