@@ -10,8 +10,7 @@ pipeline {
   stages {
     stage('Verify') {
       steps {
-        echo '✅ Running on Jenkins agent'
-        sh 'env | grep -i proxy || true'
+          echo "RUN_E2E=${params.RUN_E2E}"
       }
     }
 
@@ -41,4 +40,3 @@ pipeline {
     }
   }
 }
-
