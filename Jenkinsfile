@@ -13,6 +13,7 @@ pipeline {
         echo '✅ Running on Jenkins agent'
         sh 'env | grep -i proxy || true'
       }
+feat/test
     }
 
     stage('Unit Tests') {
@@ -22,6 +23,34 @@ pipeline {
         '''
       }
     }
+   
+
+    stage('Unit Tests') {
+      steps {
+        sh '''
+          echo "Running  Unit test...."
+        '''
+      }
+    }
+
+    stage('E2E test') {
+      when {
+        expression { return params.RUN_E2E }
+      }
+      steps {
+        sh '''
+          echo "Running E2E tests..."
+        '''
+      }
+    }
+
+    stage('Complete') {
+      steps {
+        echo '🎉 Pipeline completed successfully!'
+      }
+    }
+  }
+}
 
     stage('E2E test') {
       when {
