@@ -1,20 +1,43 @@
-pipeline {
-    agent any
-    parameters {
-        string(name: 'ghprbCommentBody', defaultValue: '', description: 'PR 评论内容')
-    }
-    stages {
-        stage('Build') {
-            when {
-                expression { 
-                    return params.ghprbCommentBody =~ /(🚀|:rocket:)/
-                }
-            }
-            steps {
-                echo "Triggered by PR comment: ${params.ghprbCommentBody}"
-                echo "Hello Jenkins"
-            }
-        }
-    }
-}
+properties([
+  parameters([
+    booleanParam(name: 'RUN_E2E', defaultValue: false, description: '是否运行E2E测试')
+  ])
+])
 
+pipeline {
+  agent any
+
+  stages {
+    stage('Verify') {
+      steps {
+        echo '✅ Running on Jenkins agent'
+        sh 'env | grep -i proxy || true'
+      }
+    }
+
+    stage('Unit Tests') {
+      steps {
+        sh '''
+          echo "Running  Unit test...."
+        '''
+      }
+    }
+
+    stage('E2E test') {
+      when {
+        expression { return params.RUN_E2E }
+      }
+      steps {
+        sh '''
+          echo "Running E2E tests..."
+        '''
+      }
+    }
+
+    stage('Complete') {
+      steps {
+        echo '🎉 Pipeline completed successfully!'
+      }
+    }
+  }
+}
