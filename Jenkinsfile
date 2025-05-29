@@ -10,7 +10,7 @@ pipeline {
   stages {
     stage('Verify') {
       steps {
-        echo "RUN_E2E=${params.RUN_E2E}"
+          echo "RUN_E2E=${params.RUN_E2E}"
       }
     }
 
