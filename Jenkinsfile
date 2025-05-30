@@ -5,33 +5,166 @@ properties([
 ])
 
 pipeline {
-  agent any
+  agent none
 
   stages {
-    stage('Verify') {
+    stage('Pre-commit Check') {
+      agent {
+        kubernetes {
+          cloud 'bp-k8s-cluster'
+          label 'unit-test-agent'
+          defaultContainer 'main'
+          yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: jenkins
+spec:
+  hostNetwork: false
+  priorityClassName: higher-priority-job
+  volumes:
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: "50G"
+  containers:
+    - name: jnlp
+      image: harbor.local.clusters/bp/jenkins/inbound-agent:latest
+      imagePullPolicy: IfNotPresent
+      args:
+        - -webSocket
+        - \$(JENKINS_SECRET)
+        - \$(JENKINS_NAME)
+      env:
+        - name: http_proxy
+          value: http://10.1.2.1:7890
+        - name: https_proxy
+          value: http://10.1.2.1:7890
+        - name: no_proxy
+          value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
+
+    - name: main
+      image: harbor.local.clusters/bp/megatron-mla:25.02_cuda128_vllm084_20250527_ci_v3
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "inf"]
+      env:
+        - name: http_proxy
+          value: http://10.1.2.1:7890
+        - name: https_proxy
+          value: http://10.1.2.1:7890
+        - name: no_proxy
+          value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
+      volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+      resources:
+        limits:
+          nvidia.com/gpu: '1'
+      securityContext:
+        capabilities:
+          add: [IPC_LOCK, SYS_RESOURCE]
+"""
+        }
+      }
       steps {
-          echo "RUN_E2E (raw) = ${params.RUN_E2E}"
-          echo "RUN_E2E as string = '${params.RUN_E2E.toString()}'"
-          
+        container('main') {
+          sh '''
+            git config --global --add safe.directory `pwd`
+            git config --unset-all core.hooksPath
+            pre-commit install
+
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+            echo $CHANGED_FILES
+
+            for file in $CHANGED_FILES; do
+              if [[ $file == *.py ]]; then
+                pre-commit run --files $file
+              fi
+            done
+          '''
+        }
       }
     }
 
-    stage('Unit Tests') {
+    stage('Run Unit Tests and Generate Coverage') {
+      agent { label 'unit-test-agent' }
       steps {
-        sh '''
-          echo "Running  Unit test...."
-        '''
+        container('main') {
+          sh '''
+             chmod +x ./test/script/chen.sh
+             ./test/script/chen.sh
+          '''
+        }
       }
     }
-
+    
     stage('E2E test') {
       when {
         expression { return params.RUN_E2E }
       }
+      agent {
+        kubernetes {
+          cloud 'bp-k8s-cluster'
+          label 'e2e-agent'
+          defaultContainer 'main'
+          yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: jenkins
+spec:
+  hostNetwork: false
+  priorityClassName: higher-priority-job
+  volumes:
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: "50G"
+  containers:
+    - name: jnlp
+      image: harbor.local.clusters/bp/jenkins/inbound-agent:latest
+      imagePullPolicy: IfNotPresent
+      args:
+        - -webSocket
+        - \$(JENKINS_SECRET)
+        - \$(JENKINS_NAME)
+      env:
+        - name: http_proxy
+          value: http://10.1.2.1:7890
+        - name: https_proxy
+          value: http://10.1.2.1:7890
+        - name: no_proxy
+          value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
+
+    - name: main
+      image: harbor.local.clusters/bp/your-e2e-image:latest
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "inf"]
+      env:
+        - name: http_proxy
+          value: http://10.1.2.1:7890
+        - name: https_proxy
+          value: http://10.1.2.1:7890
+        - name: no_proxy
+          value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
+      volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+      resources:
+        limits:
+          nvidia.com/gpu: '1'
+      securityContext:
+        capabilities:
+          add: [IPC_LOCK, SYS_RESOURCE]
+"""
+        }
+      }
       steps {
-        sh '''
-          echo "Running E2E tests..."
-        '''
+        container('main') {
+          sh '''
+            echo "Running E2E tests...#####################################"    
+          '''
+        }
       }
     }
 
