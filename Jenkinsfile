@@ -8,7 +8,7 @@ pipeline {
   agent none
 
   stages {
-    stage('Pre-commit Check') {
+    stage('Run Unit Tests and Generate Coverage') {
       agent {
         kubernetes {
           cloud 'bp-k8s-cluster'
@@ -68,18 +68,7 @@ spec:
       }
       steps {
         container('main') {
-          sh '''
-             echo "skip................."
-          '''
-        }
-      }
-    }
-
-    stage('Run Unit Tests and Generate Coverage') {
-      agent { label 'unit-test-agent' }
-      steps {
-        container('main') {
-          sh '''
+           sh '''
              chmod +x ./test/script/chen.sh
              ./test/script/chen.sh
           '''
