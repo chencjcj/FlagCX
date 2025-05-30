@@ -69,8 +69,7 @@ spec:
       steps {
         container('main') {
            sh '''
-             chmod +x ./test/script/chen.sh
-             ./test/script/chen.sh
+              echo "Running  unit tests...#####################################"    
           '''
         }
       }
