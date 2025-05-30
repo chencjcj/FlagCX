@@ -115,7 +115,7 @@ spec:
           value: localhost,127.0.0.1,jenkins,jenkins.jenkins.svc
 
     - name: main
-      image: harbor.local.clusters/bp/your-e2e-image:latest
+      image: harbor.local.clusters/bp/megatron-mla:25.02_cuda128_vllm084_20250527_ci_v3
       imagePullPolicy: IfNotPresent
       command: ["sleep", "inf"]
       env:
