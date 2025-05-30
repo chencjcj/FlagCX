@@ -66,25 +66,6 @@ spec:
 """
         }
       }
-      steps {
-        container('main') {
-          sh '''
-            git config --global --add safe.directory `pwd`
-            git config --unset-all core.hooksPath
-            pre-commit install
-
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-            echo $CHANGED_FILES
-
-            for file in $CHANGED_FILES; do
-              if [[ $file == *.py ]]; then
-                pre-commit run --files $file
-              fi
-            done
-          '''
-        }
-      }
-    }
 
     stage('Run Unit Tests and Generate Coverage') {
       agent { label 'unit-test-agent' }
