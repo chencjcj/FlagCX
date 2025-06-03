@@ -65,7 +65,7 @@ spec:
     stage('Verify') {
       steps {
         echo '✅ Running on Jenkins pod'
-        echo '${params.RUN_E2E}'
+        echo ${params.RUN_E2E}
       }
     }
 
