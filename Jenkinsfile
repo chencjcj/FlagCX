@@ -65,7 +65,7 @@ spec:
     stage('Verify') {
       steps {
         echo '✅ Running on Jenkins pod'
-        sh 'env | grep -i proxy'
+        echo "${params.RUN_E2E}"
       }
     }
 
