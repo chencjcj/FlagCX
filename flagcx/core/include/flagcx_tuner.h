@@ -16,12 +16,6 @@ struct flagcxTuner {
   // Name of the tuner
   const char *name;
 
-  void *bootstrap;
-
-  int rank;
-  int nranks;
-
-  float *profilingResults;
   // Initializes tuner states.
   // Inputs:
   //   - nRanks: number of ranks in current communicator. Each communicator
@@ -31,8 +25,9 @@ struct flagcxTuner {
   //   with FLAGCX core.
   // Outputs:
   //   - context: tuner context object
-  flagcxResult_t (*init)(size_t nRanks, size_t nNodes,
-                         flagcxDebugLogger_t logFunction, void **context);
+  flagcxResult_t (*init)(size_t nRanks, size_t rank,
+                         flagcxDebugLogger_t logFunction, void **context,
+                         void *commState);
 
   // Gets number of candidate communicator env settings available from this
   // tuner. Inputs:
@@ -106,6 +101,14 @@ struct flagcxTuner {
   flagcxResult_t (*createOrReplaceHomoComm)(
       flagcxComm_t *comm, struct flagcxTunerContext *ctx, uint32_t seqId,
       const struct TunerCollCategory &collCat, bool createBest);
+
+  // Switch communicator config
+  flagcxResult_t (*switchCommConfig)(void *context, flagcxComm_t *comm,
+                                     int bestConfigId);
+
+  // Handle flagscale tuning logic
+  flagcxResult_t (*handleFlagscaleTuning)(void *context, flagcxComm_t comm,
+                                          flagcxCommOp_t commOp, size_t nBytes);
 };
 
 typedef struct flagcxTuner flagcxTuner_t;
@@ -121,10 +124,28 @@ extern flagcxTuner_t internalTuner;
 flagcxResult_t flagcxCreateHomoCommForTag(flagcxComm_t comm, uint32_t idx);
 flagcxResult_t flagcxDestroyHomoCommByTag(flagcxComm_t comm, uint32_t idx);
 
+// Switch communicator config
+flagcxResult_t flagcxTunerSwitchCommConfig(void *context, flagcxComm_t *comm,
+                                           int bestConfigId);
+
+// Handle flagscale tuning logic
+// Returns flagcxSuccess if should call the original function and return
+// immediately, flagcxInProgress if should continue with profiling logic, or
+// other error codes on failure
+flagcxResult_t flagcxHandleFlagscaleTuning(void *context, flagcxComm_t comm,
+                                           flagcxCommOp_t commOp,
+                                           size_t nBytes);
+
 #define FLAGCXCALLWITHTUNER(call, comm, commOp, count, datatype, stream)       \
   do {                                                                         \
-    comm->tunerInnerComm = nullptr;                                            \
     size_t nBytes = count * getFlagcxDataTypeSize(datatype);                   \
+    if (comm->isTuningWithFlagscale) {                                         \
+      FLAGCXCHECK(comm->tuner->handleFlagscaleTuning(comm->tunerContext, comm, \
+                                                     commOp, nBytes));         \
+      FLAGCXCHECK(call);                                                       \
+      return flagcxSuccess;                                                    \
+    }                                                                          \
+    comm->tunerInnerComm = nullptr;                                            \
     struct flagcxCommTag tag = {""};                                           \
     FLAGCXCHECK(comm->tuner->getCollInfo(comm->tunerContext, commOp, nBytes,   \
                                          0, NULL, 0, &tag, &comm));            \

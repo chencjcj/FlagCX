@@ -34,6 +34,7 @@ extern struct flagcxCCLAdaptor musa_mcclAdaptor;
 extern struct flagcxCCLAdaptor xcclAdaptor;
 extern struct flagcxCCLAdaptor duncclAdaptor;
 extern struct flagcxCCLAdaptor rcclAdaptor;
+extern struct flagcxCCLAdaptor tcclAdaptor;
 extern struct flagcxCCLAdaptor *cclAdaptors[];
 
 extern struct flagcxDeviceAdaptor cudaAdaptor;
@@ -45,6 +46,7 @@ extern struct flagcxDeviceAdaptor musaAdaptor;
 extern struct flagcxDeviceAdaptor kunlunAdaptor;
 extern struct flagcxDeviceAdaptor ducudaAdaptor;
 extern struct flagcxDeviceAdaptor hipAdaptor;
+extern struct flagcxDeviceAdaptor tsmicroAdaptor;
 extern struct flagcxDeviceAdaptor *deviceAdaptor;
 
 extern struct flagcxNetAdaptor *netAdaptor;
@@ -276,13 +278,15 @@ struct flagcxNetAdaptor {
                            void **mhandles, void **request);
   flagcxResult_t (*test)(void *request, int *done, int *sizes);
 
-  // One-sided functions
-  flagcxResult_t (*write)(void *sendComm, void *data, size_t size, int tag,
-                          void *mhandle, void *phandle, void **request);
-  flagcxResult_t (*read)(void *recvComm, void *data, size_t size, int tag,
-                         void *mhandle, void *phandle, void **request);
-  flagcxResult_t (*signal)(void *sendComm, void *data, size_t size, int tag,
-                           void *mhandle, void *phandle, void **request);
+  // One-sided
+  flagcxResult_t (*put)(void *sendComm, uint64_t srcOff, uint64_t dstOff,
+                        size_t size, int srcRank, int dstRank, void **gHandles,
+                        void **request);
+  flagcxResult_t (*putSignal)(void *sendComm, uint64_t dstOff, int tag,
+                              int srcRank, int dstRank, void **gHandles,
+                              void **request);
+  flagcxResult_t (*waitValue)(void **gHandles, int rank, uint64_t offset,
+                              uint64_t expected);
 
   // Device name lookup
   flagcxResult_t (*getDevFromName)(char *name, int *dev);

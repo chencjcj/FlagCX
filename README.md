@@ -3,31 +3,36 @@
 
 
 ## Latest News
-- **[2025/10]** Released [v0.6](https://github.com/FlagOpen/FlagCX/tree/release/v0.6):
-  - Supported device-buffer P2P communication to achieve intra-node SendRecv operations.
+- **[2025/11]** Released [v0.7](https://github.com/flagos-ai/FlagCX/releases/tag/v0.7.0):
+  - Added support for TsingMicro, including tsmicroAdaptor and tcclAdaptor integrations.
+  - Implemented naïve kernel-free non-reduce collective communication (SendRecv, AlltoAll, AlltoAllv, Broadcast, Gather, Scatter, AllGather) using device-buffer IPC/RDMA techniques.
+  - Enabled automatic tuning on NVIDIA, Metax, and Hygon platforms, achieving 1.02×–1.26× speedups for AllReduce, AllGather, ReduceScatter, and AlltoAll.
+  - Enhanced flagcxNetAdaptor with one-sided primitives (put, putSignal, waitValue) and added retransmission support for improved reliability.
+- **[2025/10]** Released [v0.6](https://github.com/flagos-ai/FlagCX/releases/tag/v0.6.0):
+  - Supported device-buffer IPC communication to achieve intra-node SendRecv operations.
   - Introduced Device-initiated, Host-launched device-side primitives, enabling kernel-based communication directly from the device.
   - Enhanced automatic tuning functionality, achieving up to 50% performance improvement on Metax platforms for the AllReduce operation.
-- **[2025/09]** Released [v0.5](https://github.com/FlagOpen/FlagCX/tree/release/v0.5):
+- **[2025/09]** Released [v0.5](https://github.com/flagos-ai/FlagCX/releases/tag/v0.5.0):
   - Added AMD support (hipAdaptor and rcclAdaptor).
   - Introduced flagcxNetAdaptor to unify network backends, currently supporting SOCKET, IBRC, UCX and IBUC (experimently).
   - Enabled zero-copy device-buffer RDMA (user-buffer RDMA) to boost small-message performance.
   - Supported automatic tuning in homogeneous scenarios via flagcxTuner.
   - Integrated automated PyTorch API tests into CI/CD.
-- **[2025/08]** Released [v0.4](https://github.com/FlagOpen/FlagCX/tree/release/v0.4):
+- **[2025/08]** Released [v0.4](https://github.com/flagos-ai/FlagCX/releases/tag/v0.4.0):
   - Supported heterogeneous training of ERNIE4.5 on Nvidia and Iluvatar GPUs with Paddle + FlagCX.
   - Enabled more robust and flexible deployments with full support of heterogeneous communication across arbitrary NIC configurations (bug fixes). 
   - Introduced an early experimental net plugin interface extending its support for both IBRC and SOCKET, along with the ability to register device buffers via DMA-BUF.
   - Added an InterOp-level DSL to allow users designing customized C2C algorithms.
   - Provided usage documentation under docs/.
-- **[2025/07]** Released [v0.3](https://github.com/FlagOpen/FlagCX/tree/release/v0.3):
+- **[2025/07]** Released [v0.3](https://github.com/flagos-ai/FlagCX/releases/tag/v0.3.0):
   - Integrated three additional native communication libraries: HCCL, MUSACCL and MPI.
   - Enhanced heterogeneous collective communication operations with pipeline optimizations. 
   - Introduced a device-side function mechanism to enable device-buffer RDMA, complementing the original host-side function mechanism.
   - Delivered a full-stack open-source solution, FlagScale + FlagCX, for efficient heterogeneous prefilling-decoding disaggregation.
-- **[2025/05]** Released [v0.2](https://github.com/FlagOpen/FlagCX/tree/release/v0.2):
+- **[2025/05]** Released [v0.2](https://github.com/flagos-ai/FlagCX/releases/tag/v0.2.0):
   - Integrated three additional native communications libraries, including MCCL, XCCL and DUCCL.
   - Improved 11 heterogeneous collective communication operations with automatic topology detection, fully supporting both single-NIC and multi-NIC environments.
-- **[2025/04]** Released [v0.1](https://github.com/FlagOpen/FlagCX/tree/release/v0.1):
+- **[2025/04]** Released [v0.1](https://github.com/flagos-ai/FlagCX/releases/tag/v0.1.0):
   - Integrated five native communications libraries including NCCL, IXCCL, CNCL, BOOTSTRAP and GLOO.
   - Supported 11 heterogeneous collective communication operations using the originally proposed C2C (Cluster-to-Cluster) algorithm.
   - Provided a full-stack open-source solution, FlagScale + FlagCX, for efficient heterogeneous training.
@@ -38,22 +43,22 @@
 
 FlagCX is also a part of [FlagAI-Open](https://flagopen.baai.ac.cn/), an open-source initiative by BAAI that aims to foster an open-source ecosystem for AI technologies. It serves as a platform where developers, researchers, and AI enthusiasts can collaborate on various AI projects, contribute to the development of cutting-edge AI solutions, and share their work with the global community.
 
-FlagCX leverages native collective communications libraries to provide the full support of single-chip communications on different platforms. In addition to its native x-CCL support, FlagCX provides an original device-buffer RDMA design to offer advanced support for cross-chip high-performance sendrecev operations, which can also be integrated with native x-CCL backends to enable optimized cross-chip collective communications. A comprehensive list of currently supported communication backends and their different capabilities are listed as follows:
-| Backend       | NCCL        | IXCCL       | CNCL        | MCCL        | XCCL        | DUCCL       | HCCL        | MUSACCL     | RCCL        |
-|:--------------|:------------|:------------|:------------|:------------|:------------|:------------|:------------|:------------|:------------|
-| Mode          | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero |
-| send          | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| recv          | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| broadcast     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| gather        | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ☓/☓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| scatter       | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| reduce        | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| allreduce     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| allgather     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| reducescatter | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| alltoall      | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| alltoallv     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
-| group ops     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/☓         | ✓/✓         | ✓/✓         |
+FlagCX leverages native collective communication libraries to provide full single-chip communication support across different platforms. Beyond its native x-CCL integrations, FlagCX introduces original device-buffer IPC and device-buffer RDMA techniques, enabling high-performance P2P operations for both cross-chip and single-chip scenarios. These mechanisms can be seamlessly combined with native x-CCL backends to deliver optimized cross-chip collective communication performance. The following table summarizes the currently supported communication backends and their corresponding capabilities.
+| Backend       | NCCL        | IXCCL       | CNCL        | MCCL        | XCCL        | DUCCL       | HCCL        | MUSACCL     | RCCL        | TCCL        |
+|:--------------|:------------|:------------|:------------|:------------|:------------|:------------|:------------|:------------|:------------|:------------|
+| Mode          | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero | Homo/Hetero |
+| send          | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| recv          | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| broadcast     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| gather        | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ☓/☓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| scatter       | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| reduce        | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| allreduce     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| allgather     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| reducescatter | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| alltoall      | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| alltoallv     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
+| group ops     | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/✓         | ✓/☓         | ✓/✓         | ✓/✓         | ✓/✓         |
 
 Note that `Homo` and `Hetero` modes refer to communications among homogeneous and heterogeneous clusters. All native collective communications libraries can be referenced through the links below:
 
@@ -66,6 +71,7 @@ Note that `Homo` and `Hetero` modes refer to communications among homogeneous an
 - [HCCL](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/82RC1alpha003/hccl/hcclug/hcclug_000001.html), Ascend Communications Library.
 - [MUSACCL](https://docs.mthreads.com/musa-sdk/musa-sdk-doc-online/programming_guide/Chapter08/), Musa Collective Communications Library.
 - [RCCL](https://github.com/ROCm/rccl), ROCm Communication Collectives Library.
+- [TCCL](http://www.tsingmicro.com), TsingMicro Communication Collectives Library.
 
 Additionally, FlagCX supports three collective communication libraries for host-side communication: `BOOTSTRAP`, `GLOO`, and `MPI`. Besides `BOOTSTRAP`, which is built using the FlagCX `bootstrap` component, the other two libraries are described as follows:
 
@@ -114,7 +120,11 @@ To enable heterogeneous cross-chip communication using the PyTorch DDP FlagCX ba
     git clone https://github.com/FlagOpen/FlagCX.git
     ```
 
-2. Build the library with different flags targeting to different platforms:
+2. Initialize third party dependencies
+  ```sh
+  git submodule update --init --recursive
+  ```
+3. Build the library with different flags targeting to different platforms:
     ```sh
     cd FlagCX
     make [USE_NVIDIA/USE_ILUVATAR_COREX/USE_CAMBRICON/USE_GLOO/USE_MPI/USE_METAX/USE_MUSA/USE_KUNLUNXIN/USE_DU/USE_ASCEND/USE_AMD]=1
@@ -125,7 +135,7 @@ To enable heterogeneous cross-chip communication using the PyTorch DDP FlagCX ba
 Tests for FlagCX are maintained in `test/perf`.
 ```sh
 cd test/perf
-make [USE_NVIDIA/USE_ILUVATAR_COREX/USE_CAMBRICON/USE_METAX/USE_MUSA/USE_KUNLUNXIN/USE_DU/USE_ASCEND]=1
+make [USE_NVIDIA/USE_ILUVATAR_COREX/USE_CAMBRICON/USE_METAX/USE_MUSA/USE_KUNLUNXIN/USE_DU/USE_ASCEND/USE_TSM]=1
 mpirun --allow-run-as-root -np 8 ./test_allreduce -b 128K -e 4G -f 2
 ```
 Note that the default MPI install path is set to `/usr/local/mpi`, you may specify the MPI path with:
