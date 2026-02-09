@@ -18,6 +18,7 @@ USE_TSM ?= 0
 USE_MPI ?= 0
 USE_UCX ?= 0
 USE_IBUC ?= 0
+USE_ENFLAME ?= 0
 COMPILE_KERNEL ?= 0
 
 # set to empty if not provided
@@ -48,6 +49,8 @@ ifeq ($(strip $(DEVICE_HOME)),)
 		DEVICE_HOME = /opt/rocm
 	else ifeq ($(USE_TSM), 1)
 		DEVICE_HOME = /usr/local/kuiper
+	else ifeq ($(USE_ENFLAME), 1)
+		DEVICE_HOME = /opt/tops/
 	else
 		DEVICE_HOME = /usr/local/cuda
 	endif
@@ -74,6 +77,8 @@ ifeq ($(strip $(CCL_HOME)),)
 		CCL_HOME = /opt/rocm
 	else ifeq ($(USE_TSM), 1)
 		CCL_HOME = /usr/local/kuiper
+	else ifeq ($(USE_ENFLAME), 1)
+		CCL_HOME = /usr
 	else
 		CCL_HOME = /usr/local/nccl/build
 	endif
@@ -122,6 +127,7 @@ UCX_LIB =
 UCX_INCLUDE =
 UCX_LINK =
 NET_ADAPTOR_FLAG =
+COMPILE_KERNEL_HOST_FLAG=
 COMPILE_KERNEL_FLAG =
 ifeq ($(USE_NVIDIA), 1)
 	DEVICE_LIB = $(DEVICE_HOME)/lib64
@@ -207,6 +213,14 @@ else ifeq ($(USE_TSM), 1)
 	CCL_INCLUDE = $(CCL_HOME)/include
 	CCL_LINK = -ltccl
 	ADAPTOR_FLAG = -DUSE_TSM_ADAPTOR
+else ifeq ($(USE_ENFLAME), 1)
+	DEVICE_LIB = $(DEVICE_HOME)/lib
+	DEVICE_INCLUDE = $(DEVICE_HOME)/include
+	DEVICE_LINK = -ltopsrt
+	CCL_LIB = $(CCL_HOME)/lib
+	CCL_INCLUDE = $(CCL_HOME)/include
+	CCL_LINK = -leccl
+	ADAPTOR_FLAG = -DUSE_ENFLAME_ADAPTOR
 else
 	DEVICE_LIB = $(DEVICE_HOME)/lib64
 	DEVICE_INCLUDE = $(DEVICE_HOME)/include
@@ -220,7 +234,7 @@ endif
 ifeq ($(USE_GLOO), 1)
 	HOST_CCL_LIB = $(HOST_CCL_HOME)/lib
 	HOST_CCL_INCLUDE = $(HOST_CCL_HOME)/include
-	HOST_CCL_LINK = -lgloo
+	HOST_CCL_LINK = -lgloo -libverbs
 	HOST_CCL_ADAPTOR_FLAG = -DUSE_GLOO_ADAPTOR
 else ifeq ($(USE_MPI), 1)
 	HOST_CCL_LIB = $(MPI_HOME)/lib
@@ -259,10 +273,13 @@ endif
 
 ifeq ($(COMPILE_KERNEL), 1)
 	COMPILE_KERNEL_FLAG = -DCOMPILE_KERNEL
+	COMPILE_KERNEL_HOST_FLAG = -DCOMPILE_KERNEL_HOST
 endif
 
 LIBDIR := $(BUILDDIR)/lib
 OBJDIR := $(BUILDDIR)/obj
+PREFIX ?= /usr/local
+DESTDIR  ?= $(PREFIX)/lib
 
 INCLUDEDIR := \
 	$(abspath flagcx/include) \
@@ -310,6 +327,7 @@ print_var:
 	@echo "USE_DU: $(USE_DU)"
 	@echo "USE_AMD: $(USE_AMD)"
 	@echo "USE_TSM: $(USE_TSM)"
+	@echo "USE_ENFLAME: $(USE_ENFLAME)"
 	@echo "COMPILE_KERNEL: $(COMPILE_KERNEL)"
 	@echo "DEVICE_LIB: $(DEVICE_LIB)"
 	@echo "DEVICE_INCLUDE: $(DEVICE_INCLUDE)"
@@ -340,7 +358,7 @@ $(LIBDIR)/$(TARGET): $(LIBOBJ) $(DEVOBJS)
 $(OBJDIR)/%.o: %.cc
 	@mkdir -p `dirname $@`
 	@echo "Compiling $@"
-	@g++ $< -o $@ $(foreach dir,$(INCLUDEDIR),-I$(dir)) -I$(CCL_INCLUDE) -I$(DEVICE_INCLUDE) -I$(HOST_CCL_INCLUDE) -I$(UCX_INCLUDE) $(ADAPTOR_FLAG) $(HOST_CCL_ADAPTOR_FLAG) $(NET_ADAPTOR_FLAG) -c -fPIC -fvisibility=default -Wvla -Wno-unused-function -Wno-sign-compare -Wall -MMD -MP -g
+	@g++ $< -o $@ $(foreach dir,$(INCLUDEDIR),-I$(dir)) -I$(CCL_INCLUDE) -I$(DEVICE_INCLUDE) -I$(HOST_CCL_INCLUDE) -I$(UCX_INCLUDE) $(ADAPTOR_FLAG) $(HOST_CCL_ADAPTOR_FLAG) $(NET_ADAPTOR_FLAG) $(COMPILE_KERNEL_HOST_FLAG) -c -fPIC -fvisibility=default -Wvla -Wno-unused-function -Wno-sign-compare -Wall -MMD -MP -g
 
 ifeq ($(COMPILE_KERNEL), 1)
 $(OBJDIR)/kernel_dlink.o: $(DEVOBJ)
@@ -358,5 +376,10 @@ else
 -include $(LIBOBJ:.o=.d)
 endif
 
+INSTALLDIR := /usr/local/lib
+install:
+	@mkdir -p $(DESTDIR)
+	@cp $(LIBDIR)/$(TARGET) $(DESTDIR)/$(TARGET)
+
 clean:
-	@rm -rf $(LIBDIR)/$(TARGET) $(OBJDIR)
+	@rm -rf $(LIBDIR)/$(TARGET) $(DESTDIR)/$(TARGET) $(OBJDIR)

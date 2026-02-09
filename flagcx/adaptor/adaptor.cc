@@ -1,6 +1,7 @@
 /*************************************************************************
- * Copyright (c) 2025 by MetaX Integrated Circuits (Shanghai) Co., Ltd. All
- *Rights Reserved. Copyright (c) 2025 by DU. All Rights Reserved.
+ * Copyright (c) 2025 by MetaX Integrated Circuits (Shanghai) Co., Ltd.
+   All Rights Reserved.
+ * Copyright (c) 2025 by DU. All Rights Reserved.
  ************************************************************************/
 
 #include "adaptor.h"
@@ -106,6 +107,7 @@ struct flagcxCCLAdaptor *cclAdaptors[NCCLADAPTORS] = {&mpiAdaptor,
                                                       &duncclAdaptor};
 #endif
 struct flagcxDeviceAdaptor *deviceAdaptor = &ducudaAdaptor;
+
 #elif USE_AMD_ADAPTOR
 #ifdef USE_BOOTSTRAP_ADAPTOR
 struct flagcxCCLAdaptor *cclAdaptors[NCCLADAPTORS] = {&bootstrapAdaptor,
@@ -131,6 +133,19 @@ struct flagcxCCLAdaptor *cclAdaptors[NCCLADAPTORS] = {&mpiAdaptor,
                                                       &tcclAdaptor};
 #endif
 struct flagcxDeviceAdaptor *deviceAdaptor = &tsmicroAdaptor;
+
+#elif USE_ENFLAME_ADAPTOR
+#ifdef USE_BOOTSTRAP_ADAPTOR
+struct flagcxCCLAdaptor *cclAdaptors[NCCLADAPTORS] = {&bootstrapAdaptor,
+                                                      &ecclAdaptor};
+#elif USE_GLOO_ADAPTOR
+struct flagcxCCLAdaptor *cclAdaptors[NCCLADAPTORS] = {&glooAdaptor,
+                                                      &ecclAdaptor};
+#elif USE_MPI_ADAPTOR
+struct flagcxCCLAdaptor *cclAdaptors[NCCLADAPTORS] = {&mpiAdaptor,
+                                                      &ecclAdaptor};
+#endif
+struct flagcxDeviceAdaptor *deviceAdaptor = &topsAdaptor;
 
 #endif
 

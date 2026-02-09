@@ -1,6 +1,7 @@
 /*************************************************************************
- * Copyright (c) 2025 by MetaX Integrated Circuits (Shanghai) Co., Ltd. All
- *Rights Reserved. Copyright (c) 2025 by DU. All Rights Reserved.
+ * Copyright (c) 2025 by MetaX Integrated Circuits (Shanghai) Co., Ltd.
+   All Rights Reserved.
+ * Copyright (c) 2025 by DU. All Rights Reserved.
  ************************************************************************/
 #pragma once
 
@@ -57,6 +58,10 @@ public:
     event_ = std::make_unique<flagcxXpuEvent>();
 #elif USE_AMD_ADAPTOR
     event_ = std::make_unique<flagcxHipEvent>();
+#elif USE_TSM_ADAPTOR
+    event_ = std::make_unique<flagcxTxdaEvent>();
+#elif USE_ENFLAME_ADAPTOR
+    event_ = std::make_unique<flagcxTopsEvent>();
 #endif
   }
   bool isCompleted() override;
@@ -77,7 +82,8 @@ class flagcxBackend : public Backend {
 public:
 // TODO: check with all vendors to make sure their torch implementation support
 // backend options
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   struct TuneObjectKey {
     std::string commOp;
     size_t nBytes;
@@ -200,7 +206,8 @@ public:
   c10::intrusive_ptr<Work> recvAnysource(std::vector<at::Tensor> &tensors,
                                          int tag) override;
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   void checkRecordingEnded();
   void recordTuneObject(flagcxCommOp_t commOp, flagcxDataType_t dataType,
                         size_t count);
@@ -232,11 +239,16 @@ public:
     devName = "cuda";
 #elif USE_KUNLUNXIN_ADAPTOR
     devName = "cuda";
+#elif USE_TSM_ADAPTOR
+    devName = "txda";
+#elif USE_ENFLAME_ADAPTOR
+    devName = "gcu";
 #endif
     py::object module = py::module::import("torch.distributed");
     py::object registerBackend =
         module.attr("Backend").attr("register_backend");
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
     registerBackend("flagcx", py::cpp_function(createFlagcxBackend),
                     py::arg("extended_api") = true,
                     py::arg("devices") = py::make_tuple(devName));
@@ -263,7 +275,8 @@ protected:
   std::unordered_map<int, flagcxStream_t> flagcxStreams_;
   std::unordered_map<int, std::unique_ptr<flagcxEvent>> flagcxEvents_;
   flagcxHandlerGroup_t handler_ = nullptr;
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   const c10::intrusive_ptr<Options> options_;
   std::set<TuneObjectKey> tuneObjectSet_;
   // whether we finished recording tuning objects

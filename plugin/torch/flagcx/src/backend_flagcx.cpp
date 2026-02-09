@@ -1,6 +1,7 @@
 /*************************************************************************
- * Copyright (c) 2025 by MetaX Integrated Circuits (Shanghai) Co., Ltd. All
- *Rights Reserved. Copyright (c) 2025 by DU. All Rights Reserved.
+ * Copyright (c) 2025 by MetaX Integrated Circuits (Shanghai) Co., Ltd.
+   All Rights Reserved.
+ * Copyright (c) 2025 by DU. All Rights Reserved.
  ************************************************************************/
 #include "backend_flagcx.hpp"
 #include "utils_flagcx.hpp"
@@ -108,6 +109,11 @@ void check_device(at::Device dev1, at::Device dev2) {
     throw std::runtime_error(
         "flagcxBackend does not support multidevice tensors");
   }
+#elif USE_TSM_ADAPTOR
+  if (dev1.is_privateuseone() && dev2.is_privateuseone() && dev1 != dev2) {
+    throw std::runtime_error(
+        "flagcxBackend does not support multidevice tensors");
+  }
 #else
   if (dev1.is_cuda() && dev2.is_cuda() && dev1 != dev2) {
     throw std::runtime_error(
@@ -144,7 +150,8 @@ int64_t check_gpu_tensors_same_device(const std::vector<at::Tensor> &tensors) {
   }
   return totalNumel;
 }
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
 std::string commOpToString(flagcxCommOp_t commOp) {
   switch (commOp) {
     case flagcxCommOpSend:
@@ -260,7 +267,8 @@ c10::intrusive_ptr<c10::ivalue::Future> flagcxWork::getFuture() {
 
 // If necessary, pass store/rank/size to the ctor and exchange connection
 // information here
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
 flagcxBackend::flagcxBackend(const c10::intrusive_ptr<::c10d::Store> &store,
                              int rank, int size,
                              c10::intrusive_ptr<Options> options)
@@ -340,6 +348,10 @@ std::unique_ptr<flagcxEvent> &flagcxBackend::getEventByIndex(int eventId) {
     flagcxEvents_[eventId] = std::make_unique<flagcxXpuEvent>();
 #elif USE_AMD_ADAPTOR
     flagcxEvents_[eventId] = std::make_unique<flagcxHipEvent>();
+#elif USE_TSM_ADAPTOR
+    flagcxEvents_[eventId] = std::make_unique<flagcxTxdaEvent>();
+#elif USE_ENFLAME_ADAPTOR
+    flagcxEvents_[eventId] = std::make_unique<flagcxTopsEvent>();
 #endif
     return flagcxEvents_[eventId];
   }
@@ -391,7 +403,8 @@ void flagcxBackend::initComm(at::Device dev) {
 void flagcxBackend::initComm() {
 #if defined(USE_NVIDIA_ADAPTOR) || defined(USE_ILUVATAR_COREX_ADAPTOR) ||      \
     defined(USE_METAX_ADAPTOR) || defined(USE_DU_ADAPTOR) ||                   \
-    defined(USE_KUNLUNXIN_ADAPTOR) || defined(USE_AMD_ADAPTOR)
+    defined(USE_KUNLUNXIN_ADAPTOR) || defined(USE_AMD_ADAPTOR) ||              \
+    defined(USE_ENFLAME_ADAPTOR)
   initComm(c10::impl::getDeviceGuardImpl(at::DeviceType::CUDA)->getDevice());
 #elif defined(USE_CAMBRICON_ADAPTOR)
   initComm(
@@ -400,6 +413,9 @@ void flagcxBackend::initComm() {
   initComm(
       c10::impl::getDeviceGuardImpl(at::DeviceType::PrivateUse1)->getDevice());
 #elif defined(USE_MUSA_ADAPTOR)
+  initComm(
+      c10::impl::getDeviceGuardImpl(at::DeviceType::PrivateUse1)->getDevice());
+#elif defined(USE_TSM_ADAPTOR)
   initComm(
       c10::impl::getDeviceGuardImpl(at::DeviceType::PrivateUse1)->getDevice());
 #endif
@@ -543,7 +559,8 @@ flagcxBackend::allgather(std::vector<std::vector<at::Tensor>> &outputTensors,
     // Flatten a vector of tensors into a single, stacked tensor.
     at::Tensor outputFlattened = newLikeFlat(outputTensorsTmp);
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
     if (needRecording()) {
       recordTuneObject(flagcxCommOpAllGather, flagcxDataType,
                        inputTensor.numel());
@@ -588,7 +605,8 @@ flagcxBackend::_allgather_base(at::Tensor &outputTensor,
   initComm(inputTensor.device());
   syncStream(inputTensor.device());
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpAllGather, flagcxDataType,
                      inputTensor.numel());
@@ -625,7 +643,8 @@ flagcxBackend::allgather_into_tensor_coalesced(std::vector<at::Tensor> &outputs,
       [&](at::Tensor &input, at::Tensor &output, flagcxComm_t comm,
           flagcxStream_t stream) {
         auto flagcxDataType = getFlagcxDataType(input.scalar_type());
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
         if (options_->enableTuner && !recordingEnded) {
           recordTuneObject(flagcxCommOpAllGather, flagcxDataType,
                            input.numel());
@@ -651,7 +670,8 @@ flagcxBackend::allreduce(std::vector<at::Tensor> &tensors,
   initComm(tensor.device());
   syncStream(tensor.device());
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpAllReduce, flagcxDataType, tensor.numel());
   }
@@ -690,7 +710,8 @@ flagcxBackend::allreduce_coalesced(std::vector<at::Tensor> &tensors,
         auto flagcxDataType = getFlagcxDataType(input.scalar_type());
         auto flagcxReduceOp =
             getFlagcxReduceOp(opts.reduceOp, input, flagcxDataType);
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
         if (needRecording()) {
           recordTuneObject(flagcxCommOpAllReduce, flagcxDataType,
                            input.numel());
@@ -747,7 +768,8 @@ flagcxBackend::alltoall(std::vector<at::Tensor> &outputTensors,
     }
   }
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpAlltoAll, flagcxDataType, count);
   }
@@ -815,7 +837,8 @@ flagcxBackend::alltoall_base(at::Tensor &outputTensor, at::Tensor &inputTensor,
   syncStream(device);
 
   if (isEqualSize) {
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
     if (needRecording()) {
       recordTuneObject(flagcxCommOpAlltoAll, flagcxDataType, count);
     }
@@ -876,7 +899,8 @@ flagcxBackend::broadcast(std::vector<at::Tensor> &tensors,
   syncStream(tensor.device());
 
   const auto root = opts.rootRank + opts.rootTensor;
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpBroadcast, flagcxDataType, tensor.numel());
   }
@@ -923,7 +947,8 @@ flagcxBackend::gather(std::vector<std::vector<at::Tensor>> &outputTensors,
   // Flatten a vector of tensors into a single, stacked tensor.
   at::Tensor outputFlattened = newLikeFlat(outputTensorsTmp);
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpGather, flagcxDataType, inputTensor.numel());
   }
@@ -968,7 +993,8 @@ c10::intrusive_ptr<Work> flagcxBackend::reduce(std::vector<at::Tensor> &tensors,
 
   const auto root = opts.rootRank + opts.rootTensor;
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpReduce, flagcxDataType, tensor.numel());
   }
@@ -1022,7 +1048,8 @@ c10::intrusive_ptr<Work> flagcxBackend::reduce_scatter(
       }
     }
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
     if (needRecording()) {
       recordTuneObject(flagcxCommOpReduceScatter, flagcxDataType,
                        outputTensor.numel());
@@ -1066,7 +1093,8 @@ flagcxBackend::_reduce_scatter_base(at::Tensor &outputTensor,
     throw std::runtime_error(
         "Input tensor must be the same szie as output size times world size");
   } else {
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
     if (needRecording()) {
       recordTuneObject(flagcxCommOpReduceScatter, flagcxDataType,
                        outputTensor.numel());
@@ -1107,7 +1135,8 @@ c10::intrusive_ptr<Work> flagcxBackend::reduce_scatter_tensor_coalesced(
         auto flagcxDataType = getFlagcxDataType(input.scalar_type());
         auto flagcxReduceOp =
             getFlagcxReduceOp(opts.reduceOp, input, flagcxDataType);
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
         if (needRecording()) {
           recordTuneObject(flagcxCommOpReduceScatter, flagcxDataType,
                            output.numel());
@@ -1155,7 +1184,8 @@ flagcxBackend::scatter(std::vector<at::Tensor> &outputTensors,
     }
   }
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpScatter, flagcxDataType, outputTensor.numel());
   }
@@ -1188,7 +1218,8 @@ c10::intrusive_ptr<Work> flagcxBackend::send(std::vector<at::Tensor> &tensors,
   initComm(tensor.device());
   syncStream(tensor.device());
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpSend, flagcxDataType, tensor.numel());
   }
@@ -1223,7 +1254,8 @@ c10::intrusive_ptr<Work> flagcxBackend::recv(std::vector<at::Tensor> &tensors,
   initComm(tensor.device());
   syncStream(tensor.device());
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   if (needRecording()) {
     recordTuneObject(flagcxCommOpRecv, flagcxDataType, tensor.numel());
   }
@@ -1253,7 +1285,8 @@ flagcxBackend::recvAnysource(std::vector<at::Tensor> &tensors, int tag) {
   throw std::runtime_error("flagcxBackend does not support recvAnysource");
 }
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
 void flagcxBackend::checkRecordingEnded() {
   const char *configIdEnv = std::getenv("FLAGCX_TUNER_CONFIG_ID");
   const int configId = (configIdEnv != NULL) ? std::atoi(configIdEnv) : -1;
@@ -1311,7 +1344,8 @@ c10::intrusive_ptr<Backend> flagcxBackend::createFlagcxBackend(
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("createFlagcxBackend", &flagcxBackend::createFlagcxBackend);
 
-#if defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)
+#if (defined(USE_NVIDIA_ADAPTOR) || defined(USE_METAX_ADAPTOR)) &&             \
+    defined(TORCH_VER_GE_250)
   py::object dist = py::module::import("torch._C._distributed_c10d");
   auto pg_flagcx = intrusive_ptr_class_<flagcxBackend>(
       m, "ProcessGroupFlagCX",

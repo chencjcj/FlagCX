@@ -1,13 +1,14 @@
 /*************************************************************************
  * Copyright (c) 2016-2022, NVIDIA CORPORATION. All rights reserved.
  *
- * See LICENSE.txt for license information
+ * See LICENSE-NCCL.txt for license information
  ************************************************************************/
 
 #include "proxy.h"
 #include "adaptor.h"
 #include "comm.h"
 #include "flagcx_hetero.h"
+#include "ib_common.h"
 #include "info.h"
 #include "net.h"
 #include "p2p.h"
